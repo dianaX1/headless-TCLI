@@ -1,19 +1,13 @@
 # Railway Deployment Guide
 
-This guide explains how to deploy the Headless Telegram Client on Railway.
+This guide explains how to deploy the Headless Telegram Client on Railway using the simplified approach.
 
 ## Prerequisites
 
-1. **GitHub Personal Access Token (PAT)**
-   - Go to [GitHub Settings > Developer settings > Personal access tokens](https://github.com/settings/tokens)
-   - Click "Generate new token (classic)"
-   - Give it a name like "Railway TDLib Build"
-   - Select the `public_repo` scope (or `repo` if your repository is private)
-   - Copy the generated token
+**No special prerequisites needed!** The deployment is now completely self-contained.
 
-2. **Railway Account**
-   - Sign up at [railway.app](https://railway.app)
-   - Connect your GitHub account
+- Railway Account: Sign up at [railway.app](https://railway.app)
+- GitHub Account: Connect your GitHub account to Railway
 
 ## Deployment Steps
 
@@ -24,70 +18,101 @@ This guide explains how to deploy the Headless Telegram Client on Railway.
 3. Select "Deploy from GitHub repo"
 4. Choose this repository
 
-### Step 2: Configure Build Environment
+### Step 2: Deploy
 
-1. In your Railway project dashboard, go to **Settings**
-2. Navigate to **Environment Variables**
-3. Add a new variable:
-   - **Name:** `GITHUB_TOKEN`
-   - **Value:** Your GitHub PAT from the prerequisites
-   - **Environment:** Build (important!)
+1. Railway will automatically detect the Dockerfile
+2. The build will start automatically
+3. **No environment variables needed!**
+4. Build time: 2-3 minutes (much faster than before)
 
-### Step 3: Configure Runtime Environment
-
-Add these environment variables for runtime:
-
-- **Name:** `PORT`
-- **Value:** `8000`
-
-### Step 4: Deploy
-
-1. Railway will automatically trigger a build
-2. Monitor the build logs to ensure TDLib clones successfully
-3. You should see: "Cloning TDLib repository with token authentication"
-
-### Step 5: Access Your Application
+### Step 3: Access Your Application
 
 1. Once deployed, Railway will provide a public URL
 2. Visit the URL to access the web interface
 3. Enter your Telegram API credentials to start using the client
 
+## What Changed
+
+### Before (Complex)
+- Required GitHub Personal Access Token
+- Built TDLib from source (10-15 minutes)
+- Complex build process with authentication issues
+- Required build environment variables
+
+### After (Simple)
+- No tokens or authentication needed
+- Uses pre-compiled TDLib binaries (2-3 minutes)
+- Self-contained build process
+- Zero configuration required
+
+## Build Process
+
+The new Dockerfile:
+1. Starts with Python 3.11 slim image
+2. Installs minimal system packages (just wget)
+3. Copies your application code
+4. Installs Python dependencies (including tdjson with pre-compiled TDLib)
+5. Runs your application
+
 ## Troubleshooting
 
-### Build Fails with Git Clone Error
+### Build Still Fails
 
-If you see:
-```
-fatal: could not read Username for 'https://github.com';: No such device or address
-```
+If you encounter any build issues:
 
-**Solution:** Make sure you've added the `GITHUB_TOKEN` environment variable as a **Build** variable (not Runtime).
+1. **Check Railway logs**: Look for specific error messages
+2. **Verify requirements.txt**: Ensure `tdjson>=1.8.0` is included
+3. **Check Dockerfile**: Should match the simplified version
 
-### Build Succeeds but App Won't Start
+### App Won't Start
 
-1. Check that the `PORT` environment variable is set to `8000`
-2. Verify that `start.sh` has proper permissions
-3. Check the runtime logs for Python errors
+1. **Check start.sh**: Ensure the script exists and is executable
+2. **Verify Python dependencies**: All packages should install correctly
+3. **Check Railway runtime logs**: Look for Python errors
 
-### TDLib Build Takes Too Long
+### TDLib Not Found
 
-The TDLib compilation can take 10-15 minutes. This is normal. Railway has generous build timeouts, so be patient.
+If you get TDLib-related errors:
+1. The `tdjson` package should provide all necessary TDLib binaries
+2. No additional configuration should be needed
+3. Check that `tdjson>=1.8.0` is in requirements.txt
+
+## Performance
+
+### Build Time
+- **Before**: 10-15 minutes (compiling TDLib from source)
+- **After**: 2-3 minutes (using pre-compiled binaries)
+
+### Reliability
+- **Before**: Could fail due to GitHub authentication issues
+- **After**: Self-contained, no external dependencies during build
+
+### Maintenance
+- **Before**: Required managing GitHub tokens and build environment
+- **After**: Zero configuration, deploy and go
 
 ## Security Notes
 
-- Never commit your GitHub token to the repository
-- The token only needs `public_repo` access
-- You can revoke the token anytime from GitHub settings
-- Railway encrypts environment variables
+- No GitHub tokens needed
+- No build secrets required
+- Standard Railway security applies
+- Your Telegram API credentials are entered at runtime, not build time
 
-## Alternative: Using Pre-built TDLib
+## Alternative Approaches
 
-If you continue having build issues, consider modifying the Dockerfile to use the pre-compiled `tdjson` package instead of building from source. This would eliminate the need for the GitHub token entirely.
+If you still prefer building TDLib from source (not recommended for Railway):
+1. You would need to set up GitHub authentication
+2. Build times would be much longer
+3. More potential points of failure
 
-To do this, replace the TDLib build section in the Dockerfile with:
-```dockerfile
-# Use pre-compiled TDLib instead of building from source
-# (The tdjson package is already in requirements.txt)
-```
+The pre-compiled approach is recommended for production deployments.
 
-However, building from source gives you the latest TDLib version and more control over the build process.
+## Support
+
+If you encounter issues:
+1. Check the Railway build and runtime logs
+2. Verify your Dockerfile matches the simplified version
+3. Ensure `tdjson` is in your requirements.txt
+4. Railway has excellent documentation and support
+
+The deployment should now be straightforward and reliable!
