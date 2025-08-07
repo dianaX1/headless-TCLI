@@ -1,0 +1,2 @@
+# This file ensures the static directory is created
+# Static files for the web interface will be served from this directory

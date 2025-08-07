@@ -1,0 +1,443 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Headless Telegram Client</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Courier New', monospace;
+            background-color: #000;
+            color: #00ff00;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        .terminal {
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            padding: 10px;
+        }
+
+        .header {
+            border-bottom: 1px solid #00ff00;
+            padding-bottom: 10px;
+            margin-bottom: 10px;
+        }
+
+        .header h1 {
+            font-size: 18px;
+            color: #00ff00;
+        }
+
+        .status {
+            font-size: 12px;
+            color: #ffff00;
+            margin-top: 5px;
+        }
+
+        .output {
+            flex: 1;
+            overflow-y: auto;
+            padding: 10px 0;
+            white-space: pre-wrap;
+            font-size: 14px;
+            line-height: 1.4;
+        }
+
+        .message-line {
+            margin-bottom: 5px;
+        }
+
+        .timestamp {
+            color: #888;
+        }
+
+        .sender {
+            color: #00ffff;
+            font-weight: bold;
+        }
+
+        .chat {
+            color: #ff00ff;
+            font-weight: bold;
+        }
+
+        .message-text {
+            color: #00ff00;
+            margin-left: 20px;
+        }
+
+        .system-message {
+            color: #ffff00;
+            font-style: italic;
+        }
+
+        .error-message {
+            color: #ff0000;
+            font-weight: bold;
+        }
+
+        .success-message {
+            color: #00ff00;
+            font-weight: bold;
+        }
+
+        .input-section {
+            border-top: 1px solid #00ff00;
+            padding-top: 10px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .auth-form, .message-form {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .input-group {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        label {
+            color: #00ff00;
+            font-size: 12px;
+            min-width: 80px;
+        }
+
+        input[type="text"], input[type="password"] {
+            background-color: #111;
+            border: 1px solid #00ff00;
+            color: #00ff00;
+            padding: 5px;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+        }
+
+        input[type="text"]:focus, input[type="password"]:focus {
+            outline: none;
+            border-color: #00ffff;
+            background-color: #222;
+        }
+
+        button {
+            background-color: #003300;
+            border: 1px solid #00ff00;
+            color: #00ff00;
+            padding: 5px 15px;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background-color: #004400;
+        }
+
+        button:disabled {
+            background-color: #111;
+            color: #666;
+            cursor: not-allowed;
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        .prompt {
+            color: #00ff00;
+        }
+
+        .command-help {
+            color: #888;
+            font-size: 11px;
+            margin-top: 5px;
+        }
+
+        /* Scrollbar styling */
+        .output::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .output::-webkit-scrollbar-track {
+            background: #111;
+        }
+
+        .output::-webkit-scrollbar-thumb {
+            background: #00ff00;
+            border-radius: 4px;
+        }
+
+        .output::-webkit-scrollbar-thumb:hover {
+            background: #00ffff;
+        }
+    </style>
+</head>
+<body>
+    <div class="terminal">
+        <div class="header">
+            <h1>╔══════════════════════════════════════════════════════════════╗</h1>
+            <h1>║                 HEADLESS TELEGRAM CLIENT                     ║</h1>
+            <h1>╚══════════════════════════════════════════════════════════════╝</h1>
+            <div class="status" id="status">Status: Not connected</div>
+        </div>
+
+        <div class="output" id="output">
+            <div class="system-message">Welcome to Headless Telegram Client</div>
+            <div class="system-message">Please authenticate to start using the client.</div>
+            <div class="system-message">═══════════════════════════════════════════════════════════════</div>
+        </div>
+
+        <div class="input-section">
+            <!-- Authentication Form -->
+            <div class="auth-form" id="authForm">
+                <div class="input-group">
+                    <label>API ID:</label>
+                    <input type="text" id="apiId" placeholder="Your API ID" required>
+                </div>
+                <div class="input-group">
+                    <label>API Hash:</label>
+                    <input type="password" id="apiHash" placeholder="Your API Hash" required>
+                </div>
+                <div class="input-group">
+                    <label>Phone:</label>
+                    <input type="text" id="phone" placeholder="+1234567890 (optional)">
+                </div>
+                <button onclick="authenticate()" id="authBtn">AUTHENTICATE</button>
+            </div>
+
+            <!-- Message Form -->
+            <div class="message-form hidden" id="messageForm">
+                <div class="input-group">
+                    <label>Chat:</label>
+                    <input type="text" id="chatId" placeholder="@username or chat_id">
+                </div>
+                <div class="input-group">
+                    <label>Message:</label>
+                    <input type="text" id="messageText" placeholder="Type your message..." onkeypress="handleMessageKeyPress(event)">
+                </div>
+                <button onclick="sendMessage()" id="sendBtn">SEND</button>
+            </div>
+
+            <div class="command-help">
+                <div>Commands: Use @username or numeric chat_id to send messages</div>
+                <div>Press Enter in message field to send quickly</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let ws = null;
+        let isAuthenticated = false;
+
+        function connectWebSocket() {
+            const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+            const wsUrl = `${protocol}//${window.location.host}/ws`;
+            
+            ws = new WebSocket(wsUrl);
+            
+            ws.onopen = function(event) {
+                updateStatus('Connected to server');
+                addSystemMessage('WebSocket connection established');
+            };
+            
+            ws.onmessage = function(event) {
+                const data = JSON.parse(event.data);
+                handleWebSocketMessage(data);
+            };
+            
+            ws.onclose = function(event) {
+                updateStatus('Disconnected from server');
+                addErrorMessage('WebSocket connection closed. Attempting to reconnect...');
+                setTimeout(connectWebSocket, 3000);
+            };
+            
+            ws.onerror = function(error) {
+                addErrorMessage('WebSocket error: ' + error);
+            };
+        }
+
+        function handleWebSocketMessage(data) {
+            switch(data.type) {
+                case 'auth_status':
+                    handleAuthStatus(data.data);
+                    break;
+                case 'message':
+                    displayMessage(data.data);
+                    break;
+                case 'send_result':
+                    handleSendResult(data.data);
+                    break;
+                case 'error':
+                    addErrorMessage('Error: ' + data.data.message);
+                    break;
+            }
+        }
+
+        function handleAuthStatus(status) {
+            const statusElement = document.getElementById('status');
+            const authForm = document.getElementById('authForm');
+            const messageForm = document.getElementById('messageForm');
+            const authBtn = document.getElementById('authBtn');
+
+            switch(status.status) {
+                case 'not_started':
+                    updateStatus('Ready for authentication');
+                    authBtn.disabled = false;
+                    authBtn.textContent = 'AUTHENTICATE';
+                    break;
+                case 'authenticating':
+                    updateStatus('Authenticating...');
+                    authBtn.disabled = true;
+                    authBtn.textContent = 'AUTHENTICATING...';
+                    addSystemMessage(status.message);
+                    break;
+                case 'authenticated':
+                    updateStatus('Authenticated - Ready to send messages');
+                    authForm.classList.add('hidden');
+                    messageForm.classList.remove('hidden');
+                    isAuthenticated = true;
+                    addSuccessMessage(status.message);
+                    addSystemMessage('You can now send messages using @username or chat_id');
+                    break;
+                case 'error':
+                    updateStatus('Authentication failed');
+                    authBtn.disabled = false;
+                    authBtn.textContent = 'RETRY';
+                    addErrorMessage(status.message);
+                    break;
+            }
+        }
+
+        function displayMessage(message) {
+            const output = document.getElementById('output');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = 'message-line';
+            
+            messageDiv.innerHTML = `
+                <span class="timestamp">[${message.timestamp}]</span> 
+                <span class="sender">${escapeHtml(message.sender)}</span> | 
+                <span class="chat">${escapeHtml(message.chat)}</span>
+                <div class="message-text">> ${escapeHtml(message.text)}</div>
+            `;
+            
+            output.appendChild(messageDiv);
+            output.scrollTop = output.scrollHeight;
+        }
+
+        function handleSendResult(result) {
+            if (result.success) {
+                addSuccessMessage(result.message);
+                document.getElementById('messageText').value = '';
+            } else {
+                addErrorMessage('Send failed: ' + result.error);
+            }
+        }
+
+        function authenticate() {
+            const apiId = document.getElementById('apiId').value.trim();
+            const apiHash = document.getElementById('apiHash').value.trim();
+            const phone = document.getElementById('phone').value.trim();
+
+            if (!apiId || !apiHash) {
+                addErrorMessage('API ID and API Hash are required');
+                return;
+            }
+
+            const authData = {
+                type: 'authenticate',
+                data: {
+                    api_id: parseInt(apiId),
+                    api_hash: apiHash,
+                    phone: phone || null
+                }
+            };
+
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                ws.send(JSON.stringify(authData));
+            } else {
+                addErrorMessage('WebSocket not connected');
+            }
+        }
+
+        function sendMessage() {
+            const chatId = document.getElementById('chatId').value.trim();
+            const messageText = document.getElementById('messageText').value.trim();
+
+            if (!chatId || !messageText) {
+                addErrorMessage('Chat ID and message text are required');
+                return;
+            }
+
+            const messageData = {
+                type: 'send_message',
+                data: {
+                    chat_id: chatId,
+                    text: messageText
+                }
+            };
+
+            if (ws && ws.readyState === WebSocket.OPEN) {
+                ws.send(JSON.stringify(messageData));
+                addSystemMessage(`Sending to ${chatId}: ${messageText}`);
+            } else {
+                addErrorMessage('WebSocket not connected');
+            }
+        }
+
+        function handleMessageKeyPress(event) {
+            if (event.key === 'Enter') {
+                sendMessage();
+            }
+        }
+
+        function updateStatus(message) {
+            document.getElementById('status').textContent = 'Status: ' + message;
+        }
+
+        function addSystemMessage(message) {
+            addMessage(message, 'system-message');
+        }
+
+        function addErrorMessage(message) {
+            addMessage('ERROR: ' + message, 'error-message');
+        }
+
+        function addSuccessMessage(message) {
+            addMessage('SUCCESS: ' + message, 'success-message');
+        }
+
+        function addMessage(message, className) {
+            const output = document.getElementById('output');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = className;
+            messageDiv.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+            output.appendChild(messageDiv);
+            output.scrollTop = output.scrollHeight;
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // Initialize WebSocket connection when page loads
+        window.onload = function() {
+            connectWebSocket();
+        };
+    </script>
+</body>
+</html>
