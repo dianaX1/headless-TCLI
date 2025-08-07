@@ -7,3 +7,11 @@ venv/
 *.log
 .DS_Store
 .env
+.git
+*.md
+test_dockerfile.sh
+RAILWAY_DEPLOYMENT.md
+run_web.bat
+run_web.ps1
+setup.bat
+WINDOWS_SETUP.md

@@ -163,6 +163,22 @@ to send a message by instantiating a `Telegram` object with your
 `tdjson` directly for educational purposes, but you may adopt a
 higher‑level library in your own projects.
 
+## Deploying on CI/CD Platforms (e.g., Railway)
+
+During the Docker build, the TDLib source is cloned from GitHub. In some environments, Git may prompt for credentials which causes the build to fail. To resolve this, you can supply a GitHub Personal Access Token (PAT) as a build argument.
+
+**How to supply the token:**
+
+- **Using Railway:**  
+  In your Railway project settings, add a build environment variable named `GITHUB_TOKEN` with your GitHub PAT that has at least read access to public repositories.
+
+- **Using Docker CLI:**  
+  ```bash
+  docker build --build-arg GITHUB_TOKEN=your_token_here -t your_image_name .
+  ```
+
+The Dockerfile is set to use the token if provided. If no token is given, Git's interactive prompt is disabled (due to `GIT_TERMINAL_PROMPT=0`) and cloning will fail immediately, ensuring that you are aware that authentication is required.
+
 ## Troubleshooting
 
 * **ImportError: No module named 'tdjson'** – ensure you have run
@@ -176,6 +192,7 @@ higher‑level library in your own projects.
   displays plain text messages.  Other content types are shown as
   placeholders.  Extend `message_handler.py` to add support for
   photos, videos and documents.
+* **Git clone fails during Docker build** – If you encounter "fatal: could not read Username for 'https://github.com'" during deployment, you need to provide a GitHub token as described in the deployment section above.
 
 ---
 
